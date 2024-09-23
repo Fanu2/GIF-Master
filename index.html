@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom GIF Creator</title>
+    <script src="./gif.js"></script>
+</head>
+<body>
+    <h1>Create Custom GIF</h1>
+
+    <!-- Options for customizing the GIF -->
+    <label for="bgColor">Background Color:</label>
+    <input type="color" id="bgColor" value="#ff0000">
+    <br><br>
+
+    <label for="textOverlay">Text to Add:</label>
+    <input type="text" id="textOverlay" placeholder="Enter text">
+    <br><br>
+
+    <label for="frameDelay">Frame Delay (ms):</label>
+    <input type="number" id="frameDelay" value="500">
+    <br><br>
+
+    <label for="uploadImages">Upload Images:</label>
+    <input type="file" id="uploadImages" multiple accept="image/*">
+    <br><br>
+
+    <!-- Canvas for preview -->
+    <canvas id="canvasElement" width="400" height="300" style="border: 1px solid black;"></canvas>
+    <br><br>
+
+    <!-- Button to create and download GIF -->
+    <button id="createGifButton">Create GIF</button>
+    <button id="downloadGifButton" style="display: none;">Download GIF</button>
+
+    <script>
+        const canvas = document.getElementById('canvasElement');
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+
+        const gif = new GIF({
+            workers: 2,
+            quality: 10,
+            width: width,
+            height: height,
+            workerScript: './gif.worker.js'
+        });
+
+        let gifBlob;  // Variable to store the generated GIF blob
+
+        document.getElementById('createGifButton').onclick = function() {
+            const bgColor = document.getElementById('bgColor').value;
+            const textOverlay = document.getElementById('textOverlay').value;
+            const frameDelay = parseInt(document.getElementById('frameDelay').value);
+            const uploadImages = document.getElementById('uploadImages').files;
+
+            gif.frames = [];  // Clear previous frames in case of multiple attempts
+
+            // If no images are uploaded, use background color and text only
+            if (uploadImages.length === 0) {
+                ctx.fillStyle = bgColor;
+                ctx.fillRect(0, 0, width, height);
+
+                if (textOverlay) {
+                    ctx.fillStyle = "white";
+                    ctx.font = "20px Arial";
+                    ctx.fillText(textOverlay, 50, 150);
+                }
+
+                gif.addFrame(ctx, {copy: true, delay: frameDelay});
+            } else {
+                // Load and handle each image uploaded
+                Array.from(uploadImages).forEach((file, index) => {
+                    const img = new Image();
+                    img.src = URL.createObjectURL(file);
+                    
+                    img.onload = function() {
+                        // Draw the background color
+                        ctx.fillStyle = bgColor;
+                        ctx.fillRect(0, 0, width, height);
+
+                        // Draw the image
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        // Add text overlay
+                        if (textOverlay) {
+                            ctx.fillStyle = "white";
+                            ctx.font = "20px Arial";
+                            ctx.fillText(textOverlay, 50, 150); // Adjust text position
+                        }
+
+                        // Add the frame to the GIF
+                        gif.addFrame(ctx, {copy: true, delay: frameDelay});
+
+                        // Check if we processed all the images
+                        if (index === uploadImages.length - 1) {
+                            gif.render();  // Render the GIF after all images are added
+                        }
+                    };
+                });
+            }
+
+            // Render the GIF when finished
+            gif.on('finished', function(blob) {
+                gifBlob = blob;
+                const gifUrl = URL.createObjectURL(blob);
+
+                // Open the GIF in a new tab for viewing
+                window.open(gifUrl);
+
+                // Show the download button
+                document.getElementById('downloadGifButton').style.display = 'block';
+            });
+        };
+
+        // Download the generated GIF when the download button is clicked
+        document.getElementById('downloadGifButton').onclick = function() {
+            if (gifBlob) {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(gifBlob);
+                link.download = 'custom_gif.gif';
+                link.click();
+            }
+        };
+    </script>
+</body>
+</html>

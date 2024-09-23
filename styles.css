@@ -1,0 +1,15 @@
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background-color: #f4f4f4;
+    padding: 20px;
+}
+
+canvas {
+    display: none; /* Hide canvas */
+}
+
+#outputGif {
+    margin-top: 20px;
+    max-width: 100%;
+}
